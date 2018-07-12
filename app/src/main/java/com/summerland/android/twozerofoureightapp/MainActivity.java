@@ -42,7 +42,7 @@ public class MainActivity extends AppCompatActivity {
         cells[14] = R.id.index14;
         cells[15] = R.id.index15;
 
-        Log.i("Logm", "Inside on create main activity method");
+        //Log.i("Logm", "Inside on create main activity method");
 
         if (savedInstanceState != null) {
             TwoZeroFourEight tmpGame = (TwoZeroFourEight) savedInstanceState.getSerializable(GAME_KEY);
@@ -58,7 +58,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {
-        Log.i("Logm", "Inside onSaveInstanceState method");
+        //Log.i("Logm", "Inside onSaveInstanceState method");
         outState.putSerializable("GAME_KEY", game);
         super.onSaveInstanceState(outState);
     }
@@ -66,7 +66,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onRestoreInstanceState(Bundle savedInstanceState) {
         super.onRestoreInstanceState(savedInstanceState);
-        Log.i("Logm", "Inside onRestoreInstanceState method");
+        //Log.i("Logm", "Inside onRestoreInstanceState method");
         if (savedInstanceState != null) {
             TwoZeroFourEight tmpGame = (TwoZeroFourEight) savedInstanceState.getSerializable(GAME_KEY);
             if (tmpGame != null) {
@@ -103,29 +103,25 @@ public class MainActivity extends AppCompatActivity {
                 //if left to right sweep event on screen
                 if (x1 < x2 && x2 - x1 > MIN_DISTANCE) {
                     //Toast.makeText(this, "Left to Right Swap Performed", Toast.LENGTH_SHORT).show();
-                    if (game.actionMoveRight()) game.addNewTile();
-                    paintTiles();
+                    if (game.actionMove(Moves.right)) paintTiles();
                 }
 
                 // if right to left sweep event on screen
                 if (x1 > x2 && x1 - x2 > MIN_DISTANCE) {
                     //Toast.makeText(this, "Right to Left Swap Performed", Toast.LENGTH_SHORT).show();
-                    if (game.actionMoveLeft()) game.addNewTile();
-                    paintTiles();
+                    if (game.actionMove(Moves.left)) paintTiles();
                 }
 
                 // if UP to Down sweep event on screen
                 if (y1 < y2 && y2 - y1 > MIN_DISTANCE) {
                     //Toast.makeText(this, "UP to Down Swap Performed", Toast.LENGTH_SHORT).show();
-                    if (game.actionMoveDown()) game.addNewTile();
-                    paintTiles();
+                    if (game.actionMove(Moves.down)) paintTiles();
                 }
 
                 //if Down to UP sweep event on screen
                 if (y1 > y2 && y1 - y2 > MIN_DISTANCE) {
                     //Toast.makeText(this, "Down to UP Swap Performed", Toast.LENGTH_SHORT).show();
-                    if (game.actionMoveUp()) game.addNewTile();
-                    paintTiles();
+                    if (game.actionMove(Moves.up)) paintTiles();
                 }
                 break;
             }
@@ -150,26 +146,24 @@ public class MainActivity extends AppCompatActivity {
         ArrayList<TwoZeroFourEight.Transition> transitions = game.getTransitions();
         if (transitions == null || transitions.size() == 0) return;
 
-        for (TwoZeroFourEight.Transition trans : transitions) {
-            paintTransition(trans);
+        for (TwoZeroFourEight.Transition tran : transitions) {
+            paintTransition(tran);
         }
-
-        game.createNewTransitions();
     }
 
     private void paintTransition(TwoZeroFourEight.Transition trans) {
 
-        TextView tv = (TextView) findViewById(cells[trans.posFinal]);
+        TextView tv = (TextView) findViewById(cells[trans.newLocation]);
 
         if (trans.type == TwoZeroFourEight.actions.COMPACT) {
-            Log.i("Logm", "About to do paint compact");
-            int w = tv.getWidth();
-            int h = tv.getHeight();
-            float t = tv.getTextSize();
-            Log.i("Logm", "About to do paint compact w=" + w + " h=" + h + " t=" + t);
+            //Log.i("Logm", "About to do paint compact");
+            //int w = tv.getWidth();
+            //int h = tv.getHeight();
+            //float t = tv.getTextSize();
+            //Log.i("Logm", "About to do paint compact w=" + w + " h=" + h + " t=" + t);
             try {
                 paintCell(tv, trans.val);
-                wait(500);
+                wait(600);
             } catch (Exception e) {
                 e.printStackTrace();
             } finally {

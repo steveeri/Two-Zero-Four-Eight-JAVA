@@ -1,16 +1,22 @@
+/*
+ * Created by steve on 17/10/16.
+ * Grid is from bottom left to right, bottom to top.
+ */
+
 package com.summerland.android.twozerofoureightapp;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Random;
+import android.util.Log;
 
-/**
- * Created by steve on 17/10/16.
- * Grid is from bottom left to right, bottom to top.
- */
+
+enum Moves { left, right, up, down }
+
+
 public class TwoZeroFourEight implements Serializable {
 
-    public enum actions {ADD_NEW, BLANK, SLIDE, COMPACT, REFRESH}
+    public enum actions {ADD, BLANK, SLIDE, COMPACT, REFRESH}
 
     static final int TARGET = 2048;
     private static final int GRID_CNT = 16, ROW_CNT = 4, COL_CNT = 4, BLANK = 0;
@@ -18,7 +24,6 @@ public class TwoZeroFourEight implements Serializable {
 
     private ArrayList<Transition> transitions = null;
     private int[] tiles = new int[16];
-    private Random rand = new Random();
 
     TwoZeroFourEight() {
         this.createNewTransitions();
@@ -26,7 +31,7 @@ public class TwoZeroFourEight implements Serializable {
         this.addNewTile();
     }
 
-    void createNewTransitions() {
+    private void createNewTransitions() {
         transitions = new ArrayList<>();
     }
 
@@ -41,39 +46,41 @@ public class TwoZeroFourEight implements Serializable {
         }
     }
 
-    void addNewTile() {
-        if (numEmpty == 0) return;
+    private boolean addNewTile() {
+        if (numEmpty == 0) return false;
 
+        Random rand = new Random();
         int val = (rand.nextInt(2) + 1) * 2;
         int pos = rand.nextInt(numEmpty);
-        int blanks = 0;
+        int numBlanksFound = 0;
 
         for (int i = 0; i < GRID_CNT; i++) {
             if (tiles[i] == BLANK) {
-                if (blanks == pos) {
+                if (numBlanksFound == pos) {
                     tiles[i] = val;
                     if (val > maxTile) maxTile = val;
-                    numEmpty--;
-                    if (transitions != null)
-                        transitions.add(new Transition(actions.ADD_NEW, val, i));
-                    return;
+                    if (transitions != null) {
+                        transitions.add(new Transition(actions.ADD, val, i));
+                        numEmpty--;
+                        return true;
+                    }
                 }
-                blanks++;
+                numBlanksFound++;
             }
         }
+        return false;
     }
 
     public int getMaxTile() {
         return maxTile;
     }
 
-    public int getValue(int i) {
-        return (tiles[i]);
-    }
+    //public int getValue(int i) { return (tiles[i]); }
 
     public int getScore() {
         return score;
     }
+
 
     public boolean hasMovesRemaining() {
 
@@ -95,238 +102,171 @@ public class TwoZeroFourEight implements Serializable {
         return false;
     }
 
-    /*public boolean canCompactLeftRight(){
-        // check left-right for compact moves remaining.
-        for (int i = 0; i < ROW_CNT; i++) {
-            int val1 = tiles[i]; // seed value for the row.
-            for (int j = 1; j < COL_CNT; j++) {
-                if (val1 != 0 && val2 != 0) {
-                    if (val1 == val2) {
-                        return true;
-                    } else {
-                        val1 = val2; // we found differing non zero values.
-                    }
-                } else if (val1 == 0 && val2 != 0) {
-                    val1 = val2;
-                }
-            }
-        }
-        return false;
-    }*/
-
-/*
-    public boolean canCompactUpDown(){
-
-        // check up-down for compact moves remaining.
-        for (int i = 0; i < COL_CNT; i++) {
-            int val1 = tiles[i*COL_CNT]; // seed value for the column.
-            for (int j = 1; j < ROW_CNT; j++) {
-                int val2 = tiles[(i*COL_CNT)+j];
-                if (val1 != 0 && val2 != 0) {
-                    if (val1 == val2) {
-                        return true;
-                    } else {
-                        val1 = val2; // we found differing non zero values.
-                    }
-                } else if (val1 == 0 && val2 != 0) {
-                    val1 = val2;
-                }
-            }
-        }
-        return false;
-    }
-*/
-
     private boolean slideTileRowOrColumn(int index1, int index2, int index3, int index4) {
 
         boolean moved = false;
-        int val1 = tiles[index1];
-        int tmpI = index1;
-        for (int j = 1; j < COL_CNT; j++) {
-            int val2 = 0, tmpJ = 0;
-            switch (j) {
-                case 1:
-                    val2 = tiles[index2];
-                    tmpJ = index2;
-                    break;
-                case 2:
-                    val2 = tiles[index3];
-                    tmpJ = index3;
-                    break;
-                case 3:
-                    val2 = tiles[index4];
-                    tmpJ = index4;
-                    break;
-                default:
-                    break;
-            }
+        int[] tmpArr = {index1, index2, index3, index4};
 
-            if (val1 == 0 && val2 != 0) {
-                tiles[tmpI] = val2;
-                tiles[tmpJ] = 0;
-                if (transitions != null) {
-                    transitions.add(new Transition(actions.SLIDE, val2, tmpJ, tmpI));
-                    transitions.add(new Transition(actions.BLANK, BLANK, tmpJ));
-                }
-                val1 = 0;
-                tmpI = tmpJ;
+        // Do we have some sliding to do, or not?
+        int es = 0;  // empty spot index
+        for (int j = 1; j < tmpArr.length; j++) {
+            if (tiles[tmpArr[es]] != BLANK) {
+                es++;
+            } else if (tiles[tmpArr[j]] == BLANK) {
+                continue;
+            } else {
+                // Otherwise we have a slide condition
+                tiles[tmpArr[es]] = tiles[tmpArr[j]];
+                tiles[tmpArr[j]] = BLANK;
+                transitions.add(new Transition(actions.SLIDE, tiles[tmpArr[es]], tmpArr[es], tmpArr[j]));
+                transitions.add(new Transition(actions.BLANK, BLANK, tmpArr[j]));
                 moved = true;
-            } else if (val1 != 0 && val2 == 0) {
-                val1 = 0;
-                tmpI = tmpJ;
+                es++;
             }
         }
         return moved;
     }
 
-    private boolean slideLeft() {
-        boolean a, b, c, d;
-        a = slideTileRowOrColumn(0, 4, 8, 12);
-        b = slideTileRowOrColumn(1, 5, 9, 13);
-        c = slideTileRowOrColumn(2, 6, 10, 14);
-        d = slideTileRowOrColumn(3, 7, 11, 15);
-        return (a || b || c || d);
-    }
-
-    private boolean slideRight() {
-        boolean a, b, c, d;
-        a = slideTileRowOrColumn(12, 8, 4, 0);
-        b = slideTileRowOrColumn(13, 9, 5, 1);
-        c = slideTileRowOrColumn(14, 10, 6, 2);
-        d = slideTileRowOrColumn(15, 11, 7, 3);
-        return (a || b || c || d);
-    }
-
-    private boolean slideUp() {
-        boolean a, b, c, d;
-        a = slideTileRowOrColumn(0, 1, 2, 3);
-        b = slideTileRowOrColumn(4, 5, 6, 7);
-        c = slideTileRowOrColumn(8, 9, 10, 11);
-        d = slideTileRowOrColumn(12, 13, 14, 15);
-        return (a || b || c || d);
-    }
-
-    private boolean slideDown() {
-        boolean a, b, c, d;
-        a = slideTileRowOrColumn(3, 2, 1, 0);
-        b = slideTileRowOrColumn(7, 6, 5, 4);
-        c = slideTileRowOrColumn(11, 10, 9, 8);
-        d = slideTileRowOrColumn(15, 14, 13, 12);
-        return (a || b || c || d);
-    }
-
     private boolean compactTileRowOrColumn(int index1, int index2, int index3, int index4) {
 
         boolean compacted = false;
+        int[] tmpArr = {index1, index2, index3, index4};
 
-        for (int j = 1; j < COL_CNT; j++) {
-            int val1 = 0, val2 = 0, tmpI = 0, tmpJ = 0;
-            switch (j) {
-                case 1:
-                    val1 = tiles[index1];
-                    val2 = tiles[index2];
-                    tmpI = index1;
-                    tmpJ = index2;
-                    break;
-                case 2:
-                    val1 = tiles[index2];
-                    val2 = tiles[index3];
-                    tmpI = index2;
-                    tmpJ = index3;
-                    break;
-                case 3:
-                    val1 = tiles[index3];
-                    val2 = tiles[index4];
-                    tmpI = index3;
-                    tmpJ = index4;
-                    break;
-                default:
-                    break;
-            }
+        for (int j = 0; j < (tmpArr.length-1); j++) {
 
-            if (val1 != 0 && val1 == val2) {
-                tiles[tmpI] = val1 * 2;
-                score += tiles[tmpI];
-                if (tiles[tmpI] > maxTile) maxTile = tiles[tmpI];
-                numEmpty++;
-                tiles[tmpJ] = 0;
-                compacted = true;
+            if (tiles[tmpArr[j]] != BLANK && tiles[tmpArr[j]] == tiles[tmpArr[j+1]]) { // we found a matching pair
+                int ctv = tiles[tmpArr[j]] * 2;   // = compacted tile value
+                tiles[tmpArr[j]] = ctv;
+                tiles[tmpArr[j+1]] = BLANK;
+                score += ctv;
+                if (ctv > maxTile) { maxTile = ctv; }  // is this the biggest tile # so far
                 if (transitions != null) {
-                    transitions.add(new Transition(actions.COMPACT, tiles[tmpI], tmpJ, tmpI));
-                    transitions.add(new Transition(actions.BLANK, BLANK, tmpJ));
+                    transitions.add(new Transition(actions.COMPACT, ctv, tmpArr[j], tmpArr[j+1]));
+                    transitions.add(new Transition(actions.BLANK, BLANK, tmpArr[j+1]));
                 }
+                compacted = true;
+                numEmpty++;
             }
         }
         return compacted;
     }
 
+    private boolean slideLeft() {
+        boolean a = slideTileRowOrColumn(0, 4, 8, 12);
+        boolean b = slideTileRowOrColumn(1, 5, 9, 13);
+        boolean c = slideTileRowOrColumn(2, 6, 10, 14);
+        boolean d = slideTileRowOrColumn(3, 7, 11, 15);
+        return (a || b || c || d);
+    }
+
+    private boolean slideRight() {
+        boolean a = slideTileRowOrColumn(12, 8, 4, 0);
+        boolean b = slideTileRowOrColumn(13, 9, 5, 1);
+        boolean c = slideTileRowOrColumn(14, 10, 6, 2);
+        boolean d = slideTileRowOrColumn(15, 11, 7, 3);
+        return (a || b || c || d);
+    }
+
+    private boolean slideUp() {
+        boolean a = slideTileRowOrColumn(0, 1, 2, 3);
+        boolean b = slideTileRowOrColumn(4, 5, 6, 7);
+        boolean c = slideTileRowOrColumn(8, 9, 10, 11);
+        boolean d = slideTileRowOrColumn(12, 13, 14, 15);
+        return (a || b || c || d);
+    }
+
+    private boolean slideDown() {
+        boolean a = slideTileRowOrColumn(3, 2, 1, 0);
+        boolean b = slideTileRowOrColumn(7, 6, 5, 4);
+        boolean c = slideTileRowOrColumn(11, 10, 9, 8);
+        boolean d = slideTileRowOrColumn(15, 14, 13, 12);
+        return (a || b || c || d);
+    }
+
     private boolean compactLeft() {
-        boolean a, b, c, d;
-        a = compactTileRowOrColumn(0, 4, 8, 12);
-        b = compactTileRowOrColumn(1, 5, 9, 13);
-        c = compactTileRowOrColumn(2, 6, 10, 14);
-        d = compactTileRowOrColumn(3, 7, 11, 15);
+        boolean a = compactTileRowOrColumn(0, 4, 8, 12);
+        boolean b = compactTileRowOrColumn(1, 5, 9, 13);
+        boolean c = compactTileRowOrColumn(2, 6, 10, 14);
+        boolean d = compactTileRowOrColumn(3, 7, 11, 15);
         return (a || b || c || d);
     }
 
     private boolean compactRight() {
-        boolean a, b, c, d;
-        a = compactTileRowOrColumn(12, 8, 4, 0);
-        b = compactTileRowOrColumn(13, 9, 5, 1);
-        c = compactTileRowOrColumn(14, 10, 6, 2);
-        d = compactTileRowOrColumn(15, 11, 7, 3);
+        boolean a = compactTileRowOrColumn(12, 8, 4, 0);
+        boolean b = compactTileRowOrColumn(13, 9, 5, 1);
+        boolean c = compactTileRowOrColumn(14, 10, 6, 2);
+        boolean d = compactTileRowOrColumn(15, 11, 7, 3);
         return (a || b || c || d);
     }
 
     private boolean compactUp() {
-        boolean a, b, c, d;
-        a = compactTileRowOrColumn(0, 1, 2, 3);
-        b = compactTileRowOrColumn(4, 5, 6, 7);
-        c = compactTileRowOrColumn(8, 9, 10, 11);
-        d = compactTileRowOrColumn(12, 13, 14, 15);
+        boolean a = compactTileRowOrColumn(0, 1, 2, 3);
+        boolean b = compactTileRowOrColumn(4, 5, 6, 7);
+        boolean c = compactTileRowOrColumn(8, 9, 10, 11);
+        boolean d = compactTileRowOrColumn(12, 13, 14, 15);
         return (a || b || c || d);
     }
 
     private boolean compactDown() {
-        boolean a, b, c, d;
-        a = compactTileRowOrColumn(3, 2, 1, 0);
-        b = compactTileRowOrColumn(7, 6, 5, 4);
-        c = compactTileRowOrColumn(11, 10, 9, 8);
-        d = compactTileRowOrColumn(15, 14, 13, 12);
+        boolean a = compactTileRowOrColumn(3, 2, 1, 0);
+        boolean b = compactTileRowOrColumn(7, 6, 5, 4);
+        boolean c = compactTileRowOrColumn(11, 10, 9, 8);
+        boolean d = compactTileRowOrColumn(15, 14, 13, 12);
         return (a || b || c || d);
     }
 
-    public boolean actionMoveLeft() {
-        boolean a, b, c;
-        a = slideLeft();
-        b = compactLeft();
-        c = slideLeft();
+    private boolean actionMoveLeft() {
+        boolean a = slideLeft();
+        boolean b = compactLeft();
+        boolean c = slideLeft();
         return (a || b || c);
     }
 
-    public boolean actionMoveRight() {
-        boolean a, b, c;
-        a = slideRight();
-        b = compactRight();
-        c = slideRight();
+    private boolean actionMoveRight() {
+        boolean a = slideRight();
+        boolean b = compactRight();
+        boolean c = slideRight();
         return (a || b || c);
     }
 
-    public boolean actionMoveUp() {
-        boolean a, b, c;
-        a = slideUp();
-        b = compactUp();
-        c = slideUp();
+    private boolean actionMoveUp() {
+        boolean a = slideUp();
+        boolean b = compactUp();
+        boolean c = slideUp();
         return (a || b || c);
     }
 
-    public boolean actionMoveDown() {
-        boolean a, b, c;
-        a = slideDown();
-        b = compactDown();
-        c = slideDown();
+    private boolean actionMoveDown() {
+        boolean a = slideDown();
+        boolean b = compactDown();
+        boolean c = slideDown();
         return (a || b || c);
     }
+
+
+    // Central game move trigger
+    // Central game move trigger
+    public boolean actionMove(Moves move) {
+
+        this.createNewTransitions();
+        if (!hasMovesRemaining()) return false;
+
+        boolean result = false;
+        switch (move) {
+            case left:
+                result = actionMoveLeft();  break;
+            case right:
+                result = actionMoveRight(); break;
+            case up:
+                result = actionMoveUp();    break;
+            case down:
+                result = actionMoveDown();  break;
+        }
+
+        if (result) addNewTile();
+        return result;
+    }
+
 
     @Override
     public String toString() {
@@ -339,22 +279,23 @@ public class TwoZeroFourEight implements Serializable {
                 "--------------------\n";
     }
 
+
     class Transition implements Serializable {
 
         actions type;
-        int val = 0, posStart = -1, posFinal = -1;
+        int val, newLocation, oldLocation = -1;
 
-        Transition(actions action, int val, int posStart, int posFinal) {
+        Transition(actions action, int val, int newLocation, int oldLocation) {
             type = action;
             this.val = val;
-            this.posStart = posStart;
-            this.posFinal = posFinal;
+            this.newLocation = newLocation;
+            this.oldLocation = oldLocation;
         }
 
-        Transition(actions action, int val, int posFinal) {
+        Transition(actions action, int val, int newLocation) {
             type = action;
             this.val = val;
-            this.posFinal = posFinal;
+            this.newLocation = newLocation;
         }
     }
 }
